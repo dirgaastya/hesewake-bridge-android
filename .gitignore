@@ -1,0 +1,15 @@
+.gradle/
+build/
+**/build/
+local.properties
+*.iml
+.idea/
+
+.kotlin/
+__pycache__/
+*.jks
+*.keystore
+keystore.env
+receiver-qr.png
+HANDOFF_*.md
+NOTES_FROM_PC_SIDE.md

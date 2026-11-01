@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hesewake Bridge — pratinjau tampilan</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#e9eaf0;color:#171929;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  main{max-width:1000px;margin:auto;padding:40px 24px;display:grid;grid-template-columns:1fr 390px;gap:64px;align-items:start}
+  .intro{padding-top:70px;max-width:390px}.eyebrow{font-size:11px;font-weight:800;letter-spacing:.17em;color:#666f96}
+  h1{font-size:clamp(32px,4vw,48px);letter-spacing:-.045em;line-height:1.08;margin:18px 0}.intro p{font-size:16px;line-height:1.65;color:#555c6b}
+  .note{margin-top:30px;padding:15px 17px;border-left:3px solid #8699dc;background:#fff;border-radius:0 12px 12px 0;font-size:13px;line-height:1.6;color:#5c6474}
+  .phone{background:#101117;border:8px solid #242630;border-radius:38px;box-shadow:0 30px 80px #2529402e;overflow:hidden;color:#f5f6fc;min-width:0}
+  .statusbar{height:34px;padding:12px 22px 0;display:flex;justify-content:space-between;font-size:10px;font-weight:700}
+  .screen{height:780px;overflow-y:auto;padding:10px 22px 32px;scrollbar-width:thin;scrollbar-color:#41465e transparent}
+  .header,.row,.between{display:flex;align-items:center}.header{gap:12px}.brand{flex:1}.brand strong{font-size:16px;display:block}.brand small{font-size:10px;letter-spacing:.13em;color:#a4a8bb;font-weight:700}.logo{width:46px;height:46px;border-radius:14px;border:1px solid #353848;background:#252836;display:block}
+  .local,.section-label{font-size:10px;letter-spacing:.12em;font-weight:800;color:#a4a8bb}.local{letter-spacing:.06em}
+  .title{margin:27px 0 8px;font-size:31px;line-height:1.08;letter-spacing:-.035em;font-weight:750}.subtitle{color:#a4a8bb;font-size:15px;margin:0 0 24px}
+  .card{background:#1c1e28;border:1px solid #353848;border-radius:22px;padding:16px;margin-bottom:20px}.connection{background:#202336;border-color:#373d5a;padding:18px}.between{justify-content:space-between;gap:12px}.chip{font-size:10px;letter-spacing:.05em;color:#becbff;background:#333b5d;padding:6px 9px;border-radius:10px;font-weight:800}
+  .diagram{height:104px;margin:10px auto 12px;display:flex;justify-content:center;align-items:center;gap:10px}.diagram-box{width:80px;height:88px;border-radius:19px;background:#292d42;display:grid;place-items:center}.diagram svg{width:42px;height:42px;fill:none;stroke:#8f9ed2;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.bridge{display:flex;gap:9px;align-items:center}.bridge:before,.bridge:after{content:"";width:12px;height:2px;background:#65709a}.bridge i{width:5px;height:5px;background:#b5c3ff;border-radius:50%}
+  .status{font-size:16px;font-weight:750}.status:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#6f7489;margin-right:9px;vertical-align:2px}.small{font-size:13px;color:#a4a8bb;line-height:1.5;margin-top:5px}
+  .permission{background:#292637;border-color:#49415e}.permission h3,.card h3{font-size:15px;margin:0}.permission p{font-size:13px;line-height:1.6;color:#a4a8bb}.button{min-height:50px;border:1px solid #353848;border-radius:15px;background:#252836;color:#f5f6fc;font:700 14px system-ui;display:flex;align-items:center;justify-content:center;width:100%;margin-top:10px}.button.primary{background:#becbff;border-color:#becbff;color:#14182b}
+  .section-title{font-size:18px;font-weight:750;margin:0}.section-top{margin-top:25px}.meta{font-size:10px;letter-spacing:.1em;font-weight:700;color:#6f7489}.music-box,.laptop-box{width:54px;height:54px;border-radius:15px;background:#343a55;display:grid;place-items:center;color:#becbff;font-size:23px;margin-right:13px}.laptop-box{width:46px;height:46px;font-size:20px;background:#252836}.item-title{font-size:15px;font-weight:700}.item-sub{font-size:12px;color:#a4a8bb;margin-top:5px}.link-row{border-top:1px solid #353848;margin-top:13px;padding-top:15px;font-size:14px;font-weight:700;color:#d7dfff}.subhead{font-size:13px;color:#a4a8bb;margin:6px 0 12px}.refresh{font-size:12px;background:#252836;border:1px solid #353848;border-radius:12px;padding:10px 12px}.footer{color:#6f7489;text-align:center;font-size:12px;margin-top:20px}.placeholder{display:flex;align-items:center;margin-bottom:0}
+  @media(max-width:720px){main{display:flex;flex-direction:column;gap:28px;align-items:center;padding:28px 18px}.intro{padding:0;max-width:390px}.intro h1{font-size:32px;margin:12px 0}.phone{width:min(390px,100%)}.screen{height:720px}}
+</style>
+</head>
+<body><main>
+  <div class="intro"><div class="eyebrow">HESEWAKE BRIDGE · ANDROID</div><h1>Musik dari HP,<br>dekat di laptop.</h1><p>Pratinjau tampilan baru aplikasi penghubung untuk Hesewake Notch, dengan status koneksi dan akses media yang lebih mudah dibaca.</p><div class="note">Ini pratinjau statis untuk dilihat di laptop, bukan aplikasi Android yang berjalan. Ukuran teks dan tampilan akhir dapat berbeda menurut perangkat.</div></div>
+  <div class="phone"><div class="statusbar"><span>9:41</span><span>● ▰</span></div><div class="screen">
+    <div class="header"><img class="logo" src="bridge-icon.svg" alt=""><div class="brand"><strong>hesewake</strong><small>MEDIA BRIDGE</small></div><span class="local">● &nbsp;LOKAL</span></div>
+    <div class="title">Musikmu,<br>ikut ke laptop.</div><p class="subtitle">Putar di HP, lihat lagunya di Notch.</p>
+    <div class="card connection"><div class="between"><span class="section-label">KONEKSI PERANGKAT</span><span class="chip">WI-FI LOKAL</span></div>
+      <div class="diagram"><div class="diagram-box"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.4"/><path d="M10 5h4M11 19h2"/></svg></div><div class="bridge"><i></i><i></i><i></i></div><div class="diagram-box"><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="11.5" rx="2"/><path d="M1.5 19h21"/></svg></div></div>
+      <div class="status">Belum terhubung</div><div class="small">Hubungkan HP dan laptop ke Wi-Fi yang sama.</div>
+    </div>
+    <div class="card permission"><h3>◇ &nbsp;Izinkan akses media</h3><p>Akses notifikasi diperlukan untuk membaca lagu yang sedang diputar. Bridge hanya menggunakan informasi sesi media.</p><div class="button primary">Aktifkan akses notifikasi</div></div>
+    <div class="between"><h2 class="section-title">Sedang diputar</h2><span class="meta">DARI HP</span></div><div class="card" style="margin-top:12px"><div class="row"><div class="music-box">♫</div><div><div class="item-title">Tidak ada media aktif</div><div class="item-sub">Putar lagu di aplikasi musikmu</div></div></div><div class="link-row">♫ &nbsp; Pilih aplikasi media &nbsp; ›</div></div>
+    <div class="between section-top"><h2 class="section-title">Laptop terdekat</h2><span class="refresh">Cari ulang</span></div><div class="subhead">Pastikan keduanya berada di Wi-Fi yang sama.</div><div class="card placeholder"><div class="laptop-box">▱</div><div><div class="item-title">Belum ada laptop ditemukan</div><div class="item-sub">Buka Notch di laptop, lalu coba cari ulang.</div></div></div>
+    <div class="button primary">Scan kode QR</div><div class="button">Sambungkan ulang</div><div class="button">Putuskan koneksi</div><div class="link-row">⌁ &nbsp; Lupakan laptop &nbsp; ›</div><div class="footer">Terhubung secara lokal · Tidak perlu akun</div>
+  </div></div>
+</main></body></html>
