@@ -3,7 +3,7 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
 android {
     namespace = "id.hesewake.mediabridge"
     compileSdk = 36
-    defaultConfig { applicationId = "id.hesewake.mediabridge"; minSdk = 26; targetSdk = 35; versionCode = 1; versionName = "0.1.0" }
+    defaultConfig { applicationId = "id.hesewake.mediabridge"; minSdk = 26; targetSdk = 35; versionCode = 2; versionName = "0.1.1" }
     // The release key is not in the repository: a release is signed only when HESEWAKE_KEYSTORE (the path to the .jks) is set.
     val releaseKeystore = System.getenv("HESEWAKE_KEYSTORE")
     if (releaseKeystore != null) {
