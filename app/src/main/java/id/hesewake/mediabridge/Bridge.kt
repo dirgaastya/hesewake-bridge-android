@@ -99,6 +99,12 @@ internal object Bridge {
         val name = context?.let { runCatching { Settings.Global.getString(it.contentResolver, "device_name") }.getOrNull() }
         return (name?.takeIf { it.isNotBlank() } ?: Build.MODEL ?: "Android").take(200)
     }
+    /** The same every time, so that the PC knows this phone when it pairs again (see [DeviceId]). */
+    private fun deviceId(): String? {
+        val raw = context?.let { runCatching { Settings.Secure.getString(it.contentResolver, Settings.Secure.ANDROID_ID) }.getOrNull() }
+        return DeviceId.of(raw)
+    }
+    private fun JSONObject.withDeviceId(): JSONObject = apply { deviceId()?.let { put("device_id", it) } }
     private fun supports(result: JSONObject, capability: String): Boolean {
         val capabilities = result.optJSONArray("capabilities") ?: return false
         return (0 until capabilities.length()).any { capabilities.optString(it) == capability }
@@ -170,7 +176,7 @@ internal object Bridge {
                     return left.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                 }
                 val client = Wire.bytes(32)
-                Wire.send(out, Wire.message("pair_hello").put("client_nonce", Wire.b64(client)).put("device_name", deviceName()))
+                Wire.send(out, Wire.message("pair_hello").put("client_nonce", Wire.b64(client)).put("device_name", deviceName()).withDeviceId())
                 peer.soTimeout = remaining()
                 val challenge = Wire.read(input); require(challenge.getString("type") == "pair_challenge")
                 val server = Wire.unb64(challenge.getString("server_nonce")); require(server.size == 32)
@@ -200,7 +206,7 @@ internal object Bridge {
                 val token = result.getString("token"); require(Wire.unb64(token).size == 32)
                 TrustedStore(context!!).save(TrustedDevice(endpoint.name, endpoint.host, endpoint.port, fingerprint, token))
             } else {
-                Wire.send(out, Wire.message("auth").put("token", trusted.token).put("device_name", deviceName()))
+                Wire.send(out, Wire.message("auth").put("token", trusted.token).put("device_name", deviceName()).withDeviceId())
                 val result = Wire.read(input); require(result.getString("type") == "auth_result")
                 if (!result.getBoolean("approved")) throw AuthRejected()
                 negotiatedDelta = supports(result, "artwork_delta_v1")
