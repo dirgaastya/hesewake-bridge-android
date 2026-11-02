@@ -18,6 +18,8 @@ import android.view.KeyEvent
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.concurrent.Executors
 
 /** Reads only media sessions; other notification contents are never inspected or transmitted. */
@@ -72,7 +74,7 @@ class MediaListener : NotificationListenerService() {
     }
     fun select(packageName: String?) { selectedPackage = packageName; refresh() }
     private fun publish() {
-        val target = controller ?: run { artworkVersion++; cachedArtworkKey = null; cachedArtwork = null; Bridge.updateMedia(null); return }
+        val target = controller ?: run { artworkVersion++; cachedArtworkKey = null; cachedArtwork = null; Bridge.mediaUnavailable(); return }
         val metadata = target.metadata
         val state = target.playbackState
         val playing = state?.state == PlaybackState.STATE_PLAYING
@@ -92,17 +94,22 @@ class MediaListener : NotificationListenerService() {
         if (songKey != cachedArtworkKey) {
             cachedArtworkKey = songKey
             cachedArtwork = null
+            Bridge.updateDisplayArtwork(null)
             val version = ++artworkVersion
             val bitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
             val uri = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI) ?: metadata?.getString(MediaMetadata.METADATA_KEY_ART_URI)
             artworkWorker.execute {
-                val encoded = runCatching {
-                    if (bitmap != null) encodeArtwork(bitmap) else readArtworkUri(uri)
-                }.getOrNull()
+                val source = runCatching { readArtworkUri(uri) }.getOrNull() ?: bitmap
+                val encoded = runCatching { encodeArtwork(source) }.getOrNull()
+                val display = runCatching { source?.let { scaleArtwork(it, 1600) } }.getOrNull() ?: source
                 handler.post {
                     if (instance === this && artworkVersion == version && cachedArtworkKey == songKey) {
-                        cachedArtwork = encoded; publish()
+                        cachedArtwork = encoded; Bridge.updateDisplayArtwork(display); publish()
                     }
+                }
+                val remote = runCatching { readRemoteArtwork(uri)?.let { scaleArtwork(it, 1600) } }.getOrNull()
+                if (remote != null) handler.post {
+                    if (instance === this && artworkVersion == version && cachedArtworkKey == songKey) Bridge.updateDisplayArtwork(remote)
                 }
             }
         }
@@ -115,7 +122,7 @@ class MediaListener : NotificationListenerService() {
             .put("duration_ms", duration ?: JSONObject.NULL).put("playing", playing).put("speed", speed.toDouble()).put("actions", actions)
         Bridge.updateMedia(json)
     }
-    private fun readArtworkUri(value: String?): String? {
+    private fun readArtworkUri(value: String?): Bitmap? {
         val uri = value?.let { runCatching { Uri.parse(it) }.getOrNull() } ?: return null
         if (uri.scheme != "content") return null
         val data = contentResolver.openInputStream(uri)?.use { input ->
@@ -131,9 +138,33 @@ class MediaListener : NotificationListenerService() {
         BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         var sample = 1
-        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 1024) sample *= 2
-        val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, BitmapFactory.Options().apply { inSampleSize = sample }) ?: return null
-        return try { encodeArtwork(bitmap) } finally { bitmap.recycle() }
+        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 2048) sample *= 2
+        return BitmapFactory.decodeByteArray(data, 0, data.size, BitmapFactory.Options().apply { inSampleSize = sample })
+    }
+    private fun readRemoteArtwork(value: String?): Bitmap? {
+        val address = ArtworkUrl.higherResolution(value) ?: return null
+        val connection = URL(address).openConnection() as HttpURLConnection
+        return try {
+            connection.instanceFollowRedirects = false
+            connection.connectTimeout = 5000; connection.readTimeout = 5000
+            if (connection.responseCode != 200 || connection.contentType?.startsWith("image/", ignoreCase = true) != true) return null
+            val bytes = connection.inputStream.use { input ->
+                val output = ByteArrayOutputStream(); val buffer = ByteArray(8192); var total = 0
+                while (true) { val count = input.read(buffer); if (count < 0) break; total += count; if (total > 8 * 1024 * 1024) return null; output.write(buffer, 0, count) }
+                output.toByteArray()
+            }
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            var sample = 1; while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 2048) sample *= 2
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+        } finally { connection.disconnect() }
+    }
+    private fun scaleArtwork(bitmap: Bitmap, maximum: Int): Bitmap {
+        val maxSide = maxOf(bitmap.width, bitmap.height)
+        if (maxSide <= maximum) return bitmap
+        val scale = maximum.toDouble() / maxSide
+        return Bitmap.createScaledBitmap(bitmap, (bitmap.width * scale).toInt().coerceAtLeast(1), (bitmap.height * scale).toInt().coerceAtLeast(1), true)
     }
     private fun encodeArtwork(bitmap: Bitmap?): String? {
         bitmap ?: return null

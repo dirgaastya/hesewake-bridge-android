@@ -16,6 +16,7 @@ Persyaratan: Android 8.0 atau lebih baru, satu jaringan Wi-Fi dengan PC.
 ## Privasi
 
 - Data hanya dikirim ke PC yang sudah Anda pasangkan, lewat TLS dengan sertifikat yang sidik jarinya disematkan. Token disimpan terenkripsi (AES-GCM) di Android Keystore.
+- Untuk menampilkan artwork lebih tajam, jika media session memberikan URL gambar Google yang didukung, aplikasi dapat mengambil gambar tersebut langsung melalui HTTPS. Jika tidak tersedia, aplikasi memakai gambar lokal yang diberikan pemutar.
 - Judul lagu dan gambar tidak dicatat di log mana pun.
 - `allowBackup` mati dan lalu lintas tanpa TLS dilarang.
 

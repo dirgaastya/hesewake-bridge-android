@@ -32,6 +32,13 @@ internal object BridgeDesign {
         setColor(color); cornerRadius = radius * c.resources.displayMetrics.density
         if (stroke != null) setStroke(dp(c, 1), stroke)
     }
+    /** Translucent layered surface; the softened artwork behind it remains visible. */
+    fun glass(c: Context, radius: Float = 22f, prominent: Boolean = false): GradientDrawable = GradientDrawable(
+        GradientDrawable.Orientation.TL_BR,
+        if (prominent) intArrayOf(0x66ffffff, 0x30ffffff, 0x20ffffff) else intArrayOf(0x40ffffff, 0x1effffff, 0x18ffffff)
+    ).apply { cornerRadius = radius * c.resources.displayMetrics.density; setStroke(dp(c, 1), 0x55ffffff) }
+    fun glassRipple(c: Context, radius: Float = 22f, prominent: Boolean = false): RippleDrawable =
+        RippleDrawable(ColorStateList.valueOf(0x44ffffff), glass(c, radius, prominent), null)
     fun text(c: Context, value: String, size: Float, color: Int = white, bold: Boolean = false): TextView = TextView(c).apply {
         text = value; textSize = size; setTextColor(color); includeFontPadding = false
         typeface = Typeface.create(if (bold) "sans-serif-medium" else "sans-serif", if (bold) Typeface.BOLD else Typeface.NORMAL)
@@ -49,12 +56,11 @@ internal object BridgeDesign {
     }
     fun gap(parent: LinearLayout, height: Int) { parent.addView(View(parent.context), LinearLayout.LayoutParams(1, dp(parent.context, height))) }
     fun card(c: Context, color: Int = surface, border: Int? = null, padding: Int = 18): LinearLayout = column(c).apply {
-        background = shape(color, 22f, border, c); setPadding(dp(c, padding), dp(c, padding), dp(c, padding), dp(c, padding))
+        background = GlassSurface.background(this, 22f); setPadding(dp(c, padding), dp(c, padding), dp(c, padding), dp(c, padding))
     }
-    fun action(c: Context, label: String, filled: Boolean = false, onClick: () -> Unit): TextView = text(c, label, 14f, if (filled) Color.rgb(20, 24, 43) else white, true).apply {
+    fun action(c: Context, label: String, filled: Boolean = false, onClick: () -> Unit): TextView = text(c, label, 14f, white, true).apply {
         gravity = Gravity.CENTER; minHeight = dp(c, 50); setPadding(dp(c, 14), 0, dp(c, 14), 0)
-        val base = shape(if (filled) primary else inset, 15f, if (filled) null else line, c)
-        background = RippleDrawable(ColorStateList.valueOf(if (filled) 0x443d4d91 else 0x33ffffff), base, null)
+        background = GlassSurface.background(this, 18f, filled)
         isClickable = true; isFocusable = true; setOnClickListener { onClick() }
     }
     fun rowAction(c: Context, label: String, glyph: String, onClick: () -> Unit): LinearLayout = row(c).apply {

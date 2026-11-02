@@ -1,6 +1,7 @@
 package id.hesewake.mediabridge
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
 import android.os.Build
@@ -47,8 +48,14 @@ internal object Bridge {
     @Volatile var currentMedia: String = "Tidak ada media aktif"; private set
     @Volatile var currentArtist: String = ""; private set
     @Volatile var currentArtwork: String? = null; private set
+    @Volatile var displayArtwork: Bitmap? = null; private set
     @Volatile var mediaActive: Boolean = false; private set
     @Volatile var mediaPlaying: Boolean = false; private set
+    @Volatile var positionMs: Long = 0; private set
+    @Volatile var durationMs: Long = 0; private set
+    @Volatile var mediaActions: Set<String> = emptySet(); private set
+    @Volatile var connectionState: String = "disconnected"; private set
+    @Volatile var onServiceChanged: (() -> Unit)? = null
     @Volatile var sources: List<String> = emptyList()
     @Volatile var onChanged: (() -> Unit)? = null
     @Volatile var onPairCode: ((String, (Boolean) -> Unit) -> Unit)? = null
@@ -81,9 +88,9 @@ internal object Bridge {
                 } catch (_: Exception) { runCatching { socket?.close() } }
             }
         }, 0, 1, TimeUnit.SECONDS)
-        TrustedStore(c).load()?.let { reconnect(it) }
+        if (c.getSharedPreferences("session", Context.MODE_PRIVATE).getBoolean("active", true)) TrustedStore(c).load()?.let { reconnect(it) }
     }
-    private fun state(value: String) { status = value; main.post { onChanged?.invoke() } }
+    private fun state(value: String) { status = value; main.post { onChanged?.invoke(); onServiceChanged?.invoke() } }
     fun updateMedia(snapshot: JSONObject?) {
         latest = snapshot?.toString()
         currentMedia = snapshot?.optString("title")?.takeIf { it.isNotBlank() } ?: "Tidak ada media aktif"
@@ -91,9 +98,14 @@ internal object Bridge {
         currentArtwork = snapshot?.optString("artwork_base64")?.takeIf { it.isNotBlank() && it != "null" }
         mediaActive = snapshot?.optBoolean("active") == true
         mediaPlaying = snapshot?.optBoolean("playing") == true
-        main.post { onChanged?.invoke() }
+        positionMs = snapshot?.optLong("position_ms", 0) ?: 0
+        durationMs = snapshot?.optLong("duration_ms", 0) ?: 0
+        val actions = snapshot?.optJSONArray("actions")
+        mediaActions = if (actions == null) emptySet() else (0 until actions.length()).map { actions.optString(it) }.toSet()
+        main.post { onChanged?.invoke(); onServiceChanged?.invoke() }
     }
-    fun mediaUnavailable() = updateMedia(null)
+    fun updateDisplayArtwork(bitmap: Bitmap?) { displayArtwork = bitmap; main.post { onChanged?.invoke() } }
+    fun mediaUnavailable() { updateDisplayArtwork(null); updateMedia(null) }
     fun hasTrustedDevice(): Boolean = context?.let { TrustedStore(it).load() } != null
     private fun deviceName(): String {
         val name = context?.let { runCatching { Settings.Global.getString(it.contentResolver, "device_name") }.getOrNull() }
@@ -111,11 +123,13 @@ internal object Bridge {
     }
     fun pair(endpoint: Endpoint) {
         userStopped = false
+        connectionState = "connecting"
         val run = generation.incrementAndGet(); pairDecision?.invoke(false); closeSocket()
         Thread({ connectOnce(endpoint, null, run) }, "Bridge-pair").start()
     }
     private fun reconnect(device: TrustedDevice) {
         userStopped = false
+        connectionState = "connecting"
         val run = generation.incrementAndGet(); pairDecision?.invoke(false); closeSocket()
         Thread({
             var delay = 1L
@@ -145,7 +159,7 @@ internal object Bridge {
             }
         }, "Bridge-reconnect").start()
     }
-    fun reconnectSaved() { context?.let { TrustedStore(it).load() }?.let(::reconnect) ?: state("Belum ada laptop tepercaya") }
+    fun reconnectSaved() { context?.getSharedPreferences("session", Context.MODE_PRIVATE)?.edit()?.putBoolean("active", true)?.apply(); context?.let { TrustedStore(it).load() }?.let(::reconnect) ?: state("Belum ada laptop tepercaya") }
     private fun connectOnce(endpoint: Endpoint, trusted: TrustedDevice?, run: Int): Boolean {
         var connected = false
         var negotiatedDelta = false
@@ -196,7 +210,7 @@ internal object Bridge {
                 if (pairDecision === decide) pairDecision = null
                 if (generation.get() != run) return false
                 Wire.send(out, Wire.message("pair_decision").put("approved", answered && approved.get()))
-                if (!answered || !approved.get()) { state("Pairing dibatalkan"); return false }
+                if (!answered || !approved.get()) { connectionState = "disconnected"; state("Pairing dibatalkan"); return false }
                 peer.soTimeout = remaining()
                 val remoteDecision = Wire.read(input); require(remoteDecision.getString("type") == "pair_decision" && remoteDecision.getBoolean("approved"))
                 peer.soTimeout = remaining()
@@ -218,6 +232,7 @@ internal object Bridge {
             if (generation.get() != run) return false
             synchronized(artworkPolicy) { artworkPolicy.reset(); artworkDelta = negotiatedDelta; forgetSupported = negotiatedForget; seq = 0; heartbeatTick = 0; outputGeneration = run; output = out; authenticated = true }
             peer.soTimeout = 35_000; connected = true
+            connectionState = "connected"
             state("Terhubung ke ${endpoint.name}")
             val seen = linkedMapOf<String, Boolean>()
             while (generation.get() == run) {
@@ -250,11 +265,12 @@ internal object Bridge {
             }
         } catch (failure: Exception) {
             if (generation.get() == run) {
-                if (failure is AuthRejected) { userStopped = true; state("Laptop tidak lagi mempercayai perangkat ini. Pairing ulang.") }
-                else state(if (trusted == null && !connected) "Pairing gagal atau ditolak" else "Koneksi terputus")
+                if (failure is AuthRejected) { userStopped = true; connectionState = "rejected"; context?.getSharedPreferences("session", Context.MODE_PRIVATE)?.edit()?.putBoolean("active", false)?.apply(); state("Laptop tidak lagi mempercayai perangkat ini. Pairing ulang."); context?.let { BridgeService.stop(it) } }
+                else { connectionState = if (trusted == null && !connected) "disconnected" else "connecting"; state(if (trusted == null && !connected) "Pairing gagal atau ditolak" else "Koneksi terputus") }
             }
         } finally {
             if (generation.get() == run) { authenticated = false; output = null; closeSocket() }
+            if (generation.get() == run && trusted == null && !connected) { connectionState = "disconnected"; context?.getSharedPreferences("session", Context.MODE_PRIVATE)?.edit()?.putBoolean("active", false)?.apply(); context?.let { BridgeService.stop(it) } }
         }
         // A fresh successful pairing becomes reconnectable without asking again.
         if (trusted == null && connected && generation.get() == run && !userStopped) {
@@ -263,7 +279,7 @@ internal object Bridge {
         return connected
     }
     private fun closeSocket() { runCatching { socket?.close() }; socket = null; authenticated = false; output = null }
-    fun disconnect() { userStopped = true; generation.incrementAndGet(); pairDecision?.invoke(false); closeSocket(); state("Terputus") }
+    fun disconnect() { userStopped = true; connectionState = "disconnected"; context?.getSharedPreferences("session", Context.MODE_PRIVATE)?.edit()?.putBoolean("active", false)?.apply(); generation.incrementAndGet(); pairDecision?.invoke(false); closeSocket(); context?.let { BridgeService.stop(it) }; state("Terputus") }
     fun forget() {
         context?.let { TrustedStore(it).clear() }
         val run = generation.get(); val out = output
